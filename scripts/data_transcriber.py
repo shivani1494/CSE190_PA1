@@ -50,7 +50,7 @@ class RobotLogger():
         self.temperature_data.append(temperature)
 
     def handle_incoming_probabilities(self, message):
-        probabilities_list = message.data
+        probabilities_list = [round(x, 5) for x in message.data]
         self.probability_data.append(probabilities_list)
 
     def handle_shutdown(self, message):
