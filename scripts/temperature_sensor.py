@@ -6,8 +6,7 @@ import math as m
 import numpy as np
 from copy import deepcopy
 from cse_190_assi_1.srv import requestMapData
-from cse_190_assi_1.msg import temperatureMessage
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float32
 from read_config import read_config
 
 
@@ -27,7 +26,7 @@ class TempSensor():
         )
         self.temperature_publisher = rospy.Publisher(
                 "/temp_sensor/data",
-                temperatureMessage,
+                Float32,
                 queue_size = 10
         )
         self.temp_dict = {
@@ -35,7 +34,7 @@ class TempSensor():
                 'C': 20.0,
                 '-': 25.0
         }
-        self.temp_message = temperatureMessage()
+        self.temperature_message = Float32()
         self.sensor_on = False
         random.seed(self.config['seed'])
         self.sensor_loop()
@@ -58,7 +57,7 @@ class TempSensor():
             if self.sensor_on:
                 measurement = self.take_measurement()
                 noisy_measurement = self.add_noise(measurement)
-                self.temp_message.temperature = noisy_measurement
+                self.temp_message.data = noisy_measurement
                 self.temperature_publisher.publish(self.temp_message)
                 self.rate.sleep()
 
