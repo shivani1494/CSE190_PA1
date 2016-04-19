@@ -5,7 +5,7 @@ import random
 import math as m
 import numpy as np
 from copy import deepcopy
-from cse_190_assi_1.srv import requestMapData
+from cse_190_assi_1.srv import requestMapData, requestTexture
 from cse_190_assi_1.msg import temperatureMessage
 from std_msgs.msg import Bool
 from read_config import read_config
@@ -14,79 +14,58 @@ from math import exp
 
 class Robot():
     def __init__(self):
-    	"""this is the constructor??"""
-
-    	"""read the config file, this is a hashmap"""
- 	self.config = read_config()
     	
-        """this is telling that this class is a node, I can publish and subscribe from this"""      
+        self.config = read_config()
+    	
         rospy.init_node('Robot', anonymous=True)
-    	
-       
-        probMatrix[4][5] = 1/20 
+    
+	self.probMatrix = []
+	self.row = [1.0/20, 1.0/20, 1.0/20, 1.0/20, 1.0/20]
+	self.probMatrix.append(self.row)
+	self.probMatrix.append(self.row)
+	self.probMatrix.append(self.row)
+	self.probMatrix.append(self.row)
+        "probMatrix[4][5] = 1/20"
 
-        "run a loop to over all the moves and update the probMatrix as you go...."
+	rospy.Subscriber("/temp_sensor/data", temperatureMessage, callback)
 
-        "temperature update"
-        temperatureSensorUpdate()
+	rospy.sleep(5)
+	"why are we doing this??? why are we importing these data types from somewhere else???"
+	self.pub = rospy.Publisher("/temp_sensor/activation", Bool, queue_size=10)        
 
-        "how do I know that the updated belief about my pos is correct?"
+	rospy.wait_for_service('requestTexture')
+	self.requestTexture = rospy.ServiceProxy('requestTexture', requestTexture)  
 
-        "texture update"
-        textureSensorUpdate()
-
-        "how do I know that the updated belief about my pos is correct?"
-
-        "move update"
-        "moveRobotUpdate()"
-
-
-
+        self.temperatureSensorUpdate()
+        
 
 
     def getNormalizationConstant(self, reading, textureTrue):
 
         normalizatnCnst = 0
-        i = 0
-        j = 0
 
-        "check what the normalization constant will be??????"
-        for i in range(len(self.tempMatrix)):
-            for j in range(len(self.tempMatrix[i])):
-                if textureTrue:
+        for i in range ( len(self.tempMatrix) ):
+            for j in range( len( self.tempMatrix[i] ) ):
+                if textureTrue == true:
                     normalizatnCnst = normalizatnCnst + getJointPTextureAndX(tempReading, i, j)
-                else !textureTrue:
-                    normalizatnCnst = normalizatnCnst + getJointPTempAndX(tempReading, i, j) "is this how we call the function??"
-
-            j = 0 "update j"
-           
+                else: 
+                    normalizatnCnst = normalizatnCnst + getJointPTempAndX(tempReading, i, j)
 
         return normalizatnCnst
 
 
     def temperatureSensorUpdate(self): 
 
-       
-    	rospy.Subscriber("/temp_sensor/activation", String, callback)
+    	
 
-    	rospy.sleep(5)
+	self.pub.publish(True)
 
-        rospy.Publisher("/temp_sensor/data", true) "shou"
-	    	
-	tempMatrix = self.config["pipe_map"]
+        tempMatrix = self.config["pipe_map"]
 
         tempStdDev = self.config["temp_noise_std_dev"]
 
-	rospy.Publisher("/results/temperature_data", true)
-	
-	
-     
-    "probabiltiy of x_i, y_i, given temperature = tempReading"
- 	def calculateProbXGivenT(self, x, y, tempReading, normalizatnCst):
 
-        "So this is saying what is the P of temp=H/C/-, given the grid value"
-        "why does this formula work?????"
-
+    def calculateProbXGivenT(self, x, y, tempReading, normalizatnCst):
         return getJointPTempAndX(tempReading, x, y)/normalizatnCst
 
 
@@ -96,7 +75,7 @@ class Robot():
             gridTemp = 40 
         elif self.tempMatrix[x][y] == "C":
             gridTemp = 20
-        else self.tempMatrix[x][y] == "-":
+        else:
             gridTemp = 25
 
         error = gridTemp - tempReading
@@ -124,14 +103,11 @@ class Robot():
         
         getNormalizationConstant(textureReading, true)
 
-        i = 0
-        j = 0
-        for i in range(len(self.probMatrix))
-            for j in range( len( self.probMatrix[i] ) )
-                if textureMap[i][j] == textureReading:
-                    self.probMatrix[i][j] = calculateProbXGivenT(tempReading, i, j, normalizatnCnst)
-            i++
-            j = 0
+        for i in range(len(self.probMatrix)):
+            for j in range( len( self.probMatrix[i] ) ):
+                self.probMatrix[i][j] = calculateProbXGivenT(textureReading, i, j, normalizatnCnst)
+		
+           
 
     def getJointPTextureGivenX(self, probTexture, i, j):
         return probTexture * self.probMatrix[i][j]
@@ -140,7 +116,7 @@ class Robot():
         
         if textureMap[i][j] == textureReading:
             jointP = getJointPTextureGivenX(self.config("prob_tex_correct"), i, j)
-        else textureMap[i][j] != textureReading:
+        else:
             jointP = getJointPTextureGivenX(1 - self.config("prob_tex_correct"), i, j)
 
         return jointP/normalizatnCnst
@@ -158,56 +134,26 @@ class Robot():
 
  
 
-def callback(data):
-    tempReading = data
-    normalizatnCst = getNormalizationConstant(tempReading, false) 	
+    def callback(data):
+	normalizatnCst = getNormalizationConstant(tempReading, false)   
 
- 		
-        for i in range(len(self.probMatrix)):
-            for j in range( len( self.probMatrix[i] ) ):
-                self.probMatrix[i][j] = calculateProbXGivenT(i, j, tempReading, normalizatnCst)
-                  
+	for i in range(len(self.probMatrix)):
+	    for j in range( len( self.probMatrix[i] ) ):
+	        self.probMatrix[i][j] = calculateProbXGivenT(i, j, tempReading, normalizatnCst)   
 
+	textureSensorUpdate()  
 
+	 
+    def textureSensorClient():
+	     
+        textureResponse = self.requestTexture()
+        textureReading = textureResponse.data
 
+	return textureReading
 
-
-
-"connect to the texture sensor client properly!!!!!!"
-def textureSensorClient():
-    rospy.wait_for_service('requestTexture')
-    requestTexture = rospy.ServiceProxy('requestTexture', requestTexture)   
-    textureResponse = requestTexture()
-    textureReading = textureResponse.data
-
-    "I do need to send in my current x_i to actually get what the texture value"
-    "is at that point"
-
-    return textureReading
-
-
-
- "callback is a function that you should implement and "
- "it will set the value in temperature_data which is "
- "of type temperature message, so that now you can use it"
-
- "Do we put a ; after any line in python ???????????"
- "how to declare a matrix ????????"
-
- "print values to see what you are getting and did you expect that??"
-        "assert before passing values into a function"
-
-"why dont we pass in self into this?? because it is not a method of this class"
-"but well it is a method of some class??"
-
-
-"I do understand how everythign is working mechanically and all the prob"
-"but I dont understand how this model really works to give us the locations"
-"feels like I have been given with a model but I dont understand why should this"
-"always work and nto fail!"
-
-
-
+if __name__ == '__main__':
+     Robot()
 
 
         
+
