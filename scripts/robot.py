@@ -14,28 +14,26 @@ from math import exp
 
 class Robot():
     def __init__(self):
-    	
+        
         self.config = read_config()
-    	
+        
         rospy.init_node('Robot', anonymous=True)
     
-	self.probMatrix = []
-	self.row = [1.0/20, 1.0/20, 1.0/20, 1.0/20, 1.0/20]
-	self.probMatrix.append(self.row)
-	self.probMatrix.append(self.row)
-	self.probMatrix.append(self.row)
-	self.probMatrix.append(self.row)
-        "probMatrix[4][5] = 1/20"
+        self.probMatrix = []
+        self.row = [1.0/20, 1.0/20, 1.0/20, 1.0/20, 1.0/20]
+        self.probMatrix.append(self.row)
+        self.probMatrix.append(self.row)
+        self.probMatrix.append(self.row)
+        self.probMatrix.append(self.row)
+        
+        rospy.Subscriber("/temp_sensor/data", temperatureMessage, self.callback)
 
-	rospy.Subscriber("/temp_sensor/data", temperatureMessage, self.callback)
+        rospy.sleep(5)
+        "why are we doing this??? why are we importing these data types from somewhere else???"
+        self.pub = rospy.Publisher("/temp_sensor/activation", Bool, queue_size=10)        
 
-	rospy.sleep(5)
-	"why are we doing this??? why are we importing these data types from somewhere else???"
-	self.pub = rospy.Publisher("/temp_sensor/activation", Bool, queue_size=10)        
-
-	rospy.wait_for_service('requestTexture')
-	self.requestTexture = rospy.ServiceProxy('requestTexture', requestTexture)  
-
+        rospy.wait_for_service('requestTexture')
+        self.requestTexture = rospy.ServiceProxy('requestTexture', requestTexture)  
         self.temperatureSensorUpdate()
         
 
@@ -56,9 +54,7 @@ class Robot():
 
     def temperatureSensorUpdate(self): 
 
-    	
-
-	self.pub.publish(True)
+        self.pub.publish(True)
 
         tempMatrix = self.config["pipe_map"]
 
@@ -106,7 +102,7 @@ class Robot():
         for i in range(len(self.probMatrix)):
             for j in range( len( self.probMatrix[i] ) ):
                 self.probMatrix[i][j] = calculateProbXGivenT(textureReading, i, j, normalizatnCnst)
-		
+        
            
 
     def getJointPTextureGivenX(self, probTexture, i, j):
@@ -125,7 +121,7 @@ class Robot():
 
 
 
-    "def moveRobotUpdate(self):"
+    def moveRobotUpdate(self):
 
 
 
@@ -135,21 +131,35 @@ class Robot():
  
 
     def callback(data):
-	normalizatnCst = getNormalizationConstant(tempReading, false)   
 
-	for i in range(len(self.probMatrix)):
-	    for j in range( len( self.probMatrix[i] ) ):
-	        self.probMatrix[i][j] = calculateProbXGivenT(i, j, tempReading, normalizatnCst)   
+        normalizatnCst = getNormalizationConstant(tempReading, false)   
 
-	textureSensorUpdate()  
+        for i in range(len(self.probMatrix)):
+            for j in range( len( self.probMatrix[i] ) ):
+                self.probMatrix[i][j] = calculateProbXGivenT(i, j, tempReading, normalizatnCst)   
 
-	 
+        textureSensorUpdate()
+        
+        move_list = self.config("move_list")
+
+        for i in range(len(move_list)):
+            for j in range(len(move_list[i])):
+                
+
+        moveRobotUpdate()
+
+
+
+        "you keep sending me values right and these are coming in to me through the call back funtion"
+        "now again I need the tempertaure values and I need to keep going until I received all"
+        "walked through the entire move list"
+
+     
     def textureSensorClient():
-	     
+         
         textureResponse = self.requestTexture()
         textureReading = textureResponse.data
-
-	return textureReading
+        return textureReading
 
 if __name__ == '__main__':
      Robot()
